@@ -32,7 +32,9 @@ export function usePfTransactions(from?: string, to?: string) {
   }, [from, to]);
 
   useEffect(() => {
-    void load();
+    queueMicrotask(() => {
+      void load();
+    });
   }, [load]);
 
   return { items, total, loading, error, reload: load };

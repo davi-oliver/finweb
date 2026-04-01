@@ -1,6 +1,12 @@
 import Link from "next/link";
-import { PfSummaryCards } from "@/app/components/PersonalFinance/pf-summary-cards";
-import { PfOnboardingHint } from "@/app/components/PersonalFinance/pf-onboarding-hint";
+import { PfRecurringList } from "@/app/components/PersonalFinance/pf-recurring-list";
+import { PfResultOverTimeChart } from "@/app/components/PersonalFinance/pf-result-over-time-chart";
+import { PfByCategoryChart } from "@/app/components/PersonalFinance/pf-by-category-chart";
+import { Card, CardContent } from "@/components/ui/card";
+import { SectionHeader } from "@/components/ui/section-header";
+import { PfDashboardHeader } from "@/app/components/PersonalFinance/pf-dashboard-header";
+import { RecentTransactionsTable } from "@/app/components/PersonalFinance/pf-recent-transactions-table";
+import { Icon } from "@/components/ui/icon";
 
 export const metadata = {
   title: "Finanças pessoais | Finweb",
@@ -8,47 +14,81 @@ export const metadata = {
 };
 
 export default function PersonalFinancePage() {
+  // SSR page; keep client widgets isolated in components.
   return (
     <div className="mx-auto max-w-5xl space-y-8">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Finanças pessoais</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Resumo e atalhos. Os dados vêm das rotas{" "}
-          <code className="rounded bg-zinc-100 px-1 text-xs dark:bg-zinc-900">/api/personal-finance/*</code> com
-          sessão Supabase.
-        </p>
-      </header>
+      <PfDashboardHeader />
 
-      <PfOnboardingHint />
+      <section className="grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <PfByCategoryChart />
+        </div>
 
-      <PfSummaryCards />
+        <div className="space-y-4">
+          <Card className="shadow-none">
+            <CardContent className="space-y-3 p-0">
+              <div className="flex items-center justify-between gap-3 p-4">
+                <h2 className="text-sm font-semibold text-[var(--color-text-1)]">Próximos Vencimentos</h2>
+                <Link
+                  href="/personal-finance/recurring"
+                  className="text-sm font-medium text-[var(--color-accent)] hover:text-[var(--color-accent-strong)] hover:underline"
+                >
+                  Ver tudo
+                </Link>
+              </div>
+              <PfRecurringList />
+              <div className="p-4 pt-0">
+                <Link
+                  href="/personal-finance/transactions"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[var(--color-accent-strong)] px-4 py-2 text-sm font-semibold text-[var(--color-text-invert)] shadow-[var(--shadow-1)] hover:brightness-110"
+                >
+                  <Icon name="add" />
+                  Novo Lançamento
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
 
-      <section className="grid gap-3 sm:grid-cols-2">
-        <Link
-          href="/personal-finance/accounts"
-          className="rounded-xl border border-zinc-200 p-4 text-sm font-medium text-zinc-800 hover:border-emerald-300 hover:bg-emerald-50/50 dark:border-zinc-800 dark:text-zinc-100 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/30"
-        >
-          Contas →
-        </Link>
-        <Link
-          href="/personal-finance/transactions"
-          className="rounded-xl border border-zinc-200 p-4 text-sm font-medium text-zinc-800 hover:border-emerald-300 hover:bg-emerald-50/50 dark:border-zinc-800 dark:text-zinc-100 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/30"
-        >
-          Transações →
-        </Link>
-        <Link
-          href="/personal-finance/budgets"
-          className="rounded-xl border border-zinc-200 p-4 text-sm font-medium text-zinc-800 hover:border-emerald-300 hover:bg-emerald-50/50 dark:border-zinc-800 dark:text-zinc-100 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/30"
-        >
-          Orçamentos →
-        </Link>
-        <Link
-          href="/personal-finance/recurring"
-          className="rounded-xl border border-zinc-200 p-4 text-sm font-medium text-zinc-800 hover:border-emerald-300 hover:bg-emerald-50/50 dark:border-zinc-800 dark:text-zinc-100 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/30"
-        >
-          Recorrências →
-        </Link>
+          <Card className="shadow-none bg-[color-mix(in_srgb,var(--color-accent)_16%,var(--color-surface-1))]">
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Icon name="insights" />
+                <h2 className="text-sm font-semibold text-[var(--color-text-1)]">Investimentos em Alta</h2>
+              </div>
+              <ul className="space-y-2 text-sm">
+                {[
+                  { name: "CDB Posfixado", value: "+12,5% aa" },
+                  { name: "IVVB11", value: "+3,2%" },
+                  { name: "BTC/BRL", value: "+1,8%" },
+                ].map((i) => (
+                  <li key={i.name} className="flex items-center justify-between gap-3">
+                    <span className="text-[var(--color-text-1)]">{i.name}</span>
+                    <span className="tabular-nums font-semibold text-[var(--color-positive)]">{i.value}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
       </section>
+
+      <section className="grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-3">
+          <SectionHeader title="Transações Recentes" subtitle="Últimas movimentações de todas as contas" />
+          <RecentTransactionsTable />
+        </div>
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-[var(--color-text-1)]">Resultado no tempo</h2>
+          <PfResultOverTimeChart />
+        </div>
+      </section>
+
+      <Link
+        href="/personal-finance/transactions"
+        className="fixed bottom-6 right-6 z-40 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[var(--color-accent-strong)] px-5 text-sm font-semibold text-[var(--color-text-invert)] shadow-[var(--shadow-2)] transition-[transform,filter] duration-[var(--dur-2)] ease-[var(--ease-standard)] hover:brightness-110 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)]"
+      >
+        Novo Lançamento
+      </Link>
     </div>
   );
 }

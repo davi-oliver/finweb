@@ -2,6 +2,8 @@
 
 import { useMemo } from "react";
 import { usePfSummary } from "@/app/(dashboard)/modules/hooks/use-pf-summary";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function monthRange() {
   const now = new Date();
@@ -16,14 +18,25 @@ export function PfSummaryCards() {
   const { data, loading, error } = usePfSummary(from, to);
 
   if (loading) {
-    return <p className="text-sm text-zinc-500">Carregando resumo…</p>;
+    return (
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Card key={i}>
+            <CardContent>
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="mt-3 h-7 w-32" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
   }
   if (error) {
     return (
-      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+      <div className="rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--color-warning)_35%,transparent)] bg-[color-mix(in_srgb,var(--color-warning)_12%,transparent)] p-4 text-sm text-[var(--color-text-1)]">
         <p className="font-medium">Resumo indisponível</p>
-        <p className="mt-1 text-amber-800/90 dark:text-amber-200/90">{error}</p>
-        <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+        <p className="mt-1 text-[var(--color-text-2)]">{error}</p>
+        <p className="mt-2 text-xs text-[var(--color-text-2)]">
           Faça login (Supabase Auth) e aplique o SQL em <code>docs/personal-finance/database-schema.sql</code>.
         </p>
       </div>
@@ -36,24 +49,32 @@ export function PfSummaryCards() {
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-        <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Receitas</p>
-        <p className="mt-2 text-xl font-semibold text-emerald-600 dark:text-emerald-400">{fmt(data.totals.income)}</p>
-      </div>
-      <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-        <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Despesas</p>
-        <p className="mt-2 text-xl font-semibold text-red-600 dark:text-red-400">{fmt(data.totals.expense)}</p>
-      </div>
-      <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-        <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Resultado</p>
-        <p className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-50">{fmt(data.totals.result)}</p>
-      </div>
-      <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-        <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Saldos iniciais (contas)</p>
-        <p className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-50">
-          {fmt(data.totals.initial_balance_sum)}
-        </p>
-      </div>
+      <Card>
+        <CardContent>
+          <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-3)]">Receitas</p>
+          <p className="mt-2 text-xl font-semibold tabular-nums text-[var(--color-positive)]">{fmt(data.totals.income)}</p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent>
+          <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-3)]">Despesas</p>
+          <p className="mt-2 text-xl font-semibold tabular-nums text-[var(--color-negative)]">{fmt(data.totals.expense)}</p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent>
+          <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-3)]">Resultado</p>
+          <p className="mt-2 text-xl font-semibold tabular-nums text-[var(--color-text-1)]">{fmt(data.totals.result)}</p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent>
+          <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-3)]">Saldos iniciais (contas)</p>
+          <p className="mt-2 text-xl font-semibold tabular-nums text-[var(--color-text-1)]">
+            {fmt(data.totals.initial_balance_sum)}
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }

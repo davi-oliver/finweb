@@ -1,26 +1,186 @@
 @import "tailwindcss";
 
+:root,
+.theme-dark {
+  color-scheme: dark;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Core surfaces */
+  --color-bg: #fcfcfd;
+  --color-surface-1: #ffffff;
+  --color-surface-2: #f6f7f9;
+  --color-surface-3: #eef0f3;
+
+  /* Text */
+  --color-text-1: #0f172a;
+  --color-text-2: #334155;
+  --color-text-3: #64748b;
+  --color-text-invert: #ffffff;
+
+  /* Borders */
+  --color-border: #e5e7eb;
+  --color-border-strong: #cbd5e1;
+
+  /* Brand & semantics */
+  --color-accent: #10b981; /* emerald-ish (contido) */
+  --color-accent-strong: #059669;
+  --color-positive: #10b981;
+  --color-negative: #ef4444;
+  --color-warning: #f59e0b;
+  --color-info: #3b82f6;
+
+  /* Focus */
+  --color-focus: #22c55e;
+
+  /* Radii */
+  /*
+    Stitch "Finweb Obsidian": roundness = ROUND_EIGHT
+    Base scale aligned to an 8px rhythm.
+  */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  /* Shadows (subtle, premium) */
+  --shadow-1: 0 1px 1px rgba(15, 23, 42, 0.06), 0 6px 16px rgba(15, 23, 42, 0.06);
+  --shadow-2: 0 2px 2px rgba(15, 23, 42, 0.06), 0 12px 32px rgba(15, 23, 42, 0.10);
+
+  /* Motion */
+  --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-1: 120ms;
+  --dur-2: 180ms;
+  --dur-3: 240ms;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  /* Tailwind v4 theme bridge */
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-text-1);
+
+  --color-bg: var(--color-bg);
+  --color-surface-1: var(--color-surface-1);
+  --color-surface-2: var(--color-surface-2);
+  --color-surface-3: var(--color-surface-3);
+
+  --color-text-1: var(--color-text-1);
+  --color-text-2: var(--color-text-2);
+  --color-text-3: var(--color-text-3);
+  --color-text-invert: var(--color-text-invert);
+
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+
+  --color-accent: var(--color-accent);
+  --color-accent-strong: var(--color-accent-strong);
+  --color-positive: var(--color-positive);
+  --color-negative: var(--color-negative);
+  --color-warning: var(--color-warning);
+  --color-info: var(--color-info);
+  --color-focus: var(--color-focus);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+
+  --shadow-1: var(--shadow-1);
+  --shadow-2: var(--shadow-2);
+
+  --ease-standard: var(--ease-standard);
+  --dur-1: var(--dur-1);
+  --dur-2: var(--dur-2);
+  --dur-3: var(--dur-3);
+
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
+}
+
+/*
+  Force dark theme (Stitch fidelity) by copying the dark token set
+  to a class, so the app matches the prototype regardless of OS setting.
+*/
+.theme-dark {
+  --color-bg: #131315; /* background / surface */
+  --color-surface-1: #201f22; /* surface_container */
+  --color-surface-2: #1c1b1d; /* surface_container_low */
+  --color-surface-3: #2a2a2c; /* surface_container_high */
+
+  --color-text-1: #e5e1e4; /* on_surface */
+  --color-text-2: #bbcabf; /* on_surface_variant */
+  --color-text-3: #86948a; /* outline */
+  --color-text-invert: #002113; /* on_primary_fixed */
+
+  /* Hairlines: neutral (avoid green cast on separators) */
+  --color-border: #2d2c2f;
+  --color-border-strong: #3a393d;
+
+  --color-accent: #4edea3; /* primary */
+  --color-accent-strong: #10b981; /* primary_container */
+  --color-positive: #4edea3; /* primary */
+  --color-negative: #ffb2b7; /* secondary */
+  --color-warning: #ffb3af; /* tertiary */
+  --color-info: #6ffbbe; /* primary_fixed */
+
+  --color-focus: #4edea3;
+
+  --shadow-1: 0 20px 40px rgba(0, 0, 0, 0.40), 0 0 0 1px rgba(187, 202, 191, 0.05);
+  --shadow-2: 0 28px 72px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(187, 202, 191, 0.06);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /*
+      Stitch (project: 5348035665654884714 / design system: "Finweb Obsidian")
+      namedColors mapped to our semantic tokens.
+    */
+    --color-bg: #131315; /* background / surface */
+    --color-surface-1: #201f22; /* surface_container */
+    --color-surface-2: #1c1b1d; /* surface_container_low */
+    --color-surface-3: #2a2a2c; /* surface_container_high */
+
+    --color-text-1: #e5e1e4; /* on_surface */
+    --color-text-2: #bbcabf; /* on_surface_variant */
+    --color-text-3: #86948a; /* outline */
+    --color-text-invert: #002113; /* on_primary_fixed */
+
+    /* Hairlines: neutral (avoid green cast on separators) */
+    --color-border: #2d2c2f;
+    --color-border-strong: #3a393d;
+
+    --color-accent: #4edea3; /* primary */
+    --color-accent-strong: #10b981; /* primary_container */
+    --color-positive: #4edea3; /* primary */
+    --color-negative: #ffb2b7; /* secondary */
+    --color-warning: #ffb3af; /* tertiary */
+    --color-info: #6ffbbe; /* primary_fixed */
+
+    --color-focus: #4edea3;
+
+    --shadow-1: 0 20px 40px rgba(0, 0, 0, 0.40), 0 0 0 1px rgba(187, 202, 191, 0.05);
+    --shadow-2: 0 28px 72px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(187, 202, 191, 0.06);
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text-1);
+  font-family: var(--font-sans);
+}
+
+.material-symbols-rounded {
+  font-family: "Material Symbols Rounded";
+  font-weight: normal;
+  font-style: normal;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
 }

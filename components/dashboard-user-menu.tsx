@@ -2,14 +2,19 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { createBrowserSupabaseClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
+import { IconButton } from "@/components/ui/icon-button";
 
 export function DashboardUserMenu() {
   const router = useRouter();
   const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const menuId = useId();
+  const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const supabase = createBrowserSupabaseClient();
@@ -25,6 +30,23 @@ export function DashboardUserMenu() {
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    function onPointerDown(e: PointerEvent) {
+      const root = rootRef.current;
+      if (!root) return;
+      if (e.target instanceof Node && !root.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, []);
+
   async function signOut() {
     const supabase = createBrowserSupabaseClient();
     await supabase.auth.signOut();
@@ -33,32 +55,55 @@ export function DashboardUserMenu() {
   }
 
   return (
-    <div className="mt-auto border-t border-zinc-200 p-3 dark:border-zinc-800">
-      {loading ? (
-        <p className="px-2 text-xs text-zinc-500">Sessão…</p>
-      ) : (
-        <>
-          <p className="truncate px-2 text-xs text-zinc-600 dark:text-zinc-400" title={email ?? ""}>
-            {email ?? "—"}
-          </p>
-          <div className="mt-2 flex flex-col gap-1">
+    <div ref={rootRef} className="relative">
+      <IconButton
+        aria-label="Menu do usuário"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={menuId}
+        title={loading ? "Sessão…" : email ?? "Menu do usuário"}
+        onClick={() => setOpen((v) => !v)}
+        className="rounded-full"
+      >
+        <Icon name="person" filled />
+      </IconButton>
+
+      {open ? (
+        <div
+          id={menuId}
+          role="menu"
+          aria-label="Menu do usuário"
+          className="absolute right-0 top-[calc(100%+10px)] w-56 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-1)] shadow-[var(--shadow-2)]"
+        >
+          <div className="border-b border-[var(--color-border)] px-4 py-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-3)]">Conta</p>
+            <p className="mt-1 truncate text-sm text-[var(--color-text-1)]" title={email ?? ""}>
+              {loading ? "Sessão…" : (email ?? "—")}
+            </p>
+          </div>
+
+          <div className="p-2">
             <Link
               href="/"
-              className="rounded-md px-2 py-1.5 text-xs text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 rounded-[var(--radius-md)] px-3 py-2 text-sm text-[var(--color-text-2)] hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-1)]"
             >
+              <Icon name="home" />
               Início público
             </Link>
             <Button
               type="button"
               variant="ghost"
-              className="h-auto w-full justify-start px-2 py-1.5 text-xs"
+              className="mt-1 h-auto w-full justify-start gap-2 rounded-[var(--radius-md)] px-3 py-2 text-sm"
               onClick={() => void signOut()}
             >
+              <Icon name="logout" />
               Sair
             </Button>
           </div>
-        </>
-      )}
+        </div>
+      ) : null}
     </div>
   );
 }

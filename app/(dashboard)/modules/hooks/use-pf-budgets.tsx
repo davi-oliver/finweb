@@ -32,7 +32,9 @@ export function usePfBudgets(year?: number, month?: number) {
   }, [year, month]);
 
   useEffect(() => {
-    void load();
+    queueMicrotask(() => {
+      void load();
+    });
   }, [load]);
 
   return { items, total, loading, error, reload: load };

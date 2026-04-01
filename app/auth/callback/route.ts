@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${url.origin}/login?error=missing_code`);
   }
 
-  let response = NextResponse.redirect(redirectTarget);
+  const response = NextResponse.redirect(redirectTarget);
   const supabase = createCallbackSupabase(request, supabaseUrl, anonKey, response);
 
   if (code) {
