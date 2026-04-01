@@ -22,7 +22,9 @@ export function usePfOnboardingStatus() {
   }, []);
 
   useEffect(() => {
-    void load();
+    queueMicrotask(() => {
+      void load();
+    });
   }, [load]);
 
   return { data, loading, error, reload: load };

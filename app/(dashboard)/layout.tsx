@@ -1,10 +1,10 @@
-import { Sidebar } from "@/components/sidebar";
+import { Topbar } from "@/components/topbar";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen bg-white dark:bg-zinc-950">
-      <Sidebar />
-      <main className="min-w-0 flex-1 p-6 md:p-8">{children}</main>
+    <div className="min-h-screen bg-[var(--color-bg)]">
+      <Topbar />
+      <main className="px-6 py-6 md:py-8">{children}</main>
     </div>
   );
 }

@@ -46,7 +46,9 @@ export function usePfSummary(from: string, to: string) {
   }, [from, to]);
 
   useEffect(() => {
-    void load();
+    queueMicrotask(() => {
+      void load();
+    });
   }, [load]);
 
   return { data, loading, error, reload: load };

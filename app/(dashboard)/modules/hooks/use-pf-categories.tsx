@@ -27,7 +27,9 @@ export function usePfCategories(kind?: PfCategoryKind) {
   }, [kind]);
 
   useEffect(() => {
-    void load();
+    queueMicrotask(() => {
+      void load();
+    });
   }, [load]);
 
   return { items, total, loading, error, reload: load };
