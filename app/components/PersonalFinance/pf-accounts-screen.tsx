@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Icon } from "@/components/ui/icon";
 import { useMemo, useState } from "react";
 import type { PfAccount } from "@/lib/personal-finance-types";
+import { PfCreateAccountModal } from "@/app/components/PersonalFinance/pf-create-account-modal";
 
 function fmtBRL(n: number) {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -19,58 +20,56 @@ function initials(name: string) {
   return (a + b).toUpperCase();
 }
 
+function displayTypeForAccount(a: PfAccount): string {
+  if (a.type === "checking") return "Corrente";
+  if (a.type === "investment") return "Investimento";
+  if (a.type === "cash") return "Espécie";
+  return a.type ?? "Conta";
+}
+
 export function PfAccountsScreen() {
-  const { items, loading, error } = usePfAccounts();
+  const { items, loading, error, reload } = usePfAccounts();
   const [view, setView] = useState<"grid" | "list">("grid");
+  const [createOpen, setCreateOpen] = useState(false);
 
-  type AccountCard = Pick<PfAccount, "id" | "name" | "type" | "initial_balance" | "currency"> & {
-    displayType?: string;
-    badge?: string;
-    tone?: string;
-  };
-
-  const demoAccounts = useMemo(
-    (): AccountCard[] => [
-      { id: "demo-nu", name: "Nubank", type: "checking", displayType: "Corrente", initial_balance: 12450, currency: "BRL", badge: "Nu", tone: "bg-violet-500/20 text-violet-200" },
-      { id: "demo-xp", name: "XP Investimentos", type: "investment", displayType: "Investimento", initial_balance: 845200.5, currency: "BRL", badge: "XP", tone: "bg-yellow-500/20 text-yellow-200" },
-      { id: "demo-cash", name: "Dinheiro", type: "cash", displayType: "Espécie", initial_balance: 1200, currency: "BRL", badge: "payments", tone: "bg-emerald-500/15 text-emerald-200" },
-      { id: "demo-itau", name: "Itaú Personnalité", type: "checking", displayType: "Corrente", initial_balance: 381650.38, currency: "BRL", badge: "I", tone: "bg-orange-500/20 text-orange-200" },
-    ],
-    [],
-  );
-
-  const list: AccountCard[] = items.length
-    ? (items as PfAccount[]).map((a) => ({
+  const list = useMemo(
+    () =>
+      (items as PfAccount[]).map((a) => ({
         id: a.id,
         name: a.name,
         type: a.type,
         initial_balance: a.initial_balance,
         currency: a.currency,
-        displayType:
-          a.type === "checking"
-            ? "Corrente"
-            : a.type === "investment"
-              ? "Investimento"
-              : a.type === "cash"
-                ? "Espécie"
-                : a.type,
-      }))
-    : demoAccounts;
-  const totalWealth = items.length
-    ? items.reduce((acc, a) => acc + Number(a.initial_balance || 0), 0)
-    : demoAccounts.reduce((acc, a) => acc + a.initial_balance, 0);
-  const available = items.length ? Math.max(0, totalWealth * 0.0345) : 42890.12;
+        displayType: displayTypeForAccount(a),
+      })),
+    [items],
+  );
+
+  const totalWealth = useMemo(
+    () => items.reduce((acc, a) => acc + Number(a.initial_balance || 0), 0),
+    [items],
+  );
+
+  const hasAccounts = items.length > 0;
 
   return (
     <div className="space-y-6">
+      <PfCreateAccountModal open={createOpen} onClose={() => setCreateOpen(false)} onSuccess={() => void reload()} />
+
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-xl font-semibold tracking-[-0.02em] text-[var(--color-text-1)]">Contas</h2>
         <div className="flex items-center gap-2">
-          <Button variant="primary" size="sm" className="rounded-full px-3">
+          <Button variant="primary" size="sm" className="rounded-full px-3" type="button" onClick={() => setCreateOpen(true)}>
             <Icon name="account_balance" />
             Nova Conta
           </Button>
-          <Button variant="secondary" size="sm" className="rounded-full px-3">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="rounded-full px-3"
+            disabled
+            title="Relatórios ainda não estão disponíveis nesta versão."
+          >
             Relatórios
           </Button>
         </div>
@@ -88,20 +87,38 @@ export function PfAccountsScreen() {
         </div>
       ) : error ? (
         <p className="text-sm text-[var(--color-negative)]">{error}</p>
+      ) : !hasAccounts ? (
+        <Card className="shadow-none">
+          <CardContent className="flex flex-col items-center gap-4 py-12 text-center sm:py-14">
+            <span className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-accent)_18%,transparent)] text-[var(--color-accent)]">
+              <Icon name="account_balance_wallet" size={28} />
+            </span>
+            <div className="max-w-md space-y-2">
+              <p className="text-base font-semibold text-[var(--color-text-1)]">Nenhuma conta cadastrada</p>
+              <p className="text-sm text-[var(--color-text-2)]">
+                Cadastre onde seu dinheiro está para ver patrimônio e lançamentos alinhados à sua realidade — sem dados de exemplo.
+              </p>
+            </div>
+            <Button variant="primary" size="sm" className="rounded-full px-5" type="button" onClick={() => setCreateOpen(true)}>
+              <Icon name="add" />
+              Criar primeira conta
+            </Button>
+            <p className="text-xs text-[var(--color-text-3)]">
+              Dica: você pode ter corrente, investimentos, dinheiro em espécie e outros tipos.
+            </p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-6">
           <div className="grid gap-4 lg:grid-cols-3">
             <Card className="shadow-none lg:col-span-2">
               <CardContent className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-3)]">Patrimônio Total</p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-3)]">Patrimônio total</p>
                   <p className="mt-2 text-2xl font-semibold tabular-nums text-[var(--color-text-1)]">{fmtBRL(totalWealth)}</p>
-                  <p className="mt-2 inline-flex items-center gap-2 text-sm text-[var(--color-positive)]">
-                    <Icon name="trending_up" />
-                    + 4.2% este mês
-                  </p>
+                  <p className="mt-2 text-sm text-[var(--color-text-3)]">Soma dos saldos iniciais das contas ativas.</p>
                 </div>
-                <div className="hidden sm:block text-[var(--color-text-3)]">
+                <div className="hidden text-[var(--color-text-3)] sm:block">
                   <Icon name="account_balance" size={42} />
                 </div>
               </CardContent>
@@ -110,20 +127,18 @@ export function PfAccountsScreen() {
             <Card className="shadow-none">
               <CardContent className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-3)]">Saldo Disponível</p>
-                  <p className="mt-2 text-2xl font-semibold tabular-nums text-[var(--color-text-1)]">{fmtBRL(available)}</p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-3)]">Contas ativas</p>
+                  <p className="mt-2 text-2xl font-semibold tabular-nums text-[var(--color-text-1)]">{items.length}</p>
                 </div>
-                <div className="grid h-12 w-20 grid-cols-5 items-end gap-1 opacity-70">
-                  {[7, 10, 14, 9, 16].map((h, i) => (
-                    <div key={i} className="rounded-sm bg-[var(--color-accent)]" style={{ height: `${h * 3}px` }} />
-                  ))}
+                <div className="text-[var(--color-text-3)]">
+                  <Icon name="layers" size={36} />
                 </div>
               </CardContent>
             </Card>
           </div>
 
           <div className="flex items-center justify-between gap-3">
-            <h3 className="text-sm font-semibold text-[var(--color-text-1)]">Suas Contas</h3>
+            <h3 className="text-sm font-semibold text-[var(--color-text-1)]">Suas contas</h3>
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -154,8 +169,8 @@ export function PfAccountsScreen() {
             {list.map((a) => {
               const amount = Number(a.initial_balance ?? 0);
               const displayType = a.displayType ?? a.type ?? "Conta";
-              const badgeText = a.badge ?? initials(a.name);
-              const badgeTone = a.tone ?? "bg-[color-mix(in_srgb,var(--color-surface-3)_55%,transparent)] text-[var(--color-text-1)]";
+              const badgeText = initials(a.name);
+              const badgeTone = "bg-[color-mix(in_srgb,var(--color-surface-3)_55%,transparent)] text-[var(--color-text-1)]";
               return (
                 <Card key={a.id} className="shadow-none">
                   <CardContent className="flex items-start justify-between gap-4">
@@ -183,39 +198,26 @@ export function PfAccountsScreen() {
               );
             })}
 
-            <Card className="shadow-none">
-              <CardContent className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-[var(--color-text-1)]">Conectar Nova Instituição</p>
-                  <p className="mt-1 text-sm text-[var(--color-text-3)]">Adicionar conta de banco/corretora</p>
-                </div>
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-accent)_18%,transparent)] text-[var(--color-accent)]">
-                  <Icon name="add" />
-                </span>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="rounded-[var(--radius-lg)] bg-[color-mix(in_srgb,var(--color-surface-3)_35%,transparent)] p-3 text-xs text-[var(--color-text-2)]">
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-              {[
-                { k: "Ibovespa", v: "128.450 pts", d: "+0.45%" },
-                { k: "Dólar", v: "R$ 4,92", d: "-0.12%" },
-                { k: "Bitcoin", v: "R$ 324.150", d: "+1.2%" },
-                { k: "CDI", v: "11.15% aa", d: "" },
-                { k: "IPCA", v: "4.51%", d: "" },
-              ].map((i) => (
-                <div key={i.k} className="flex items-center justify-between gap-2 rounded-full bg-[var(--color-surface-1)] px-3 py-2">
-                  <span className="font-medium text-[var(--color-text-1)]">{i.k}</span>
-                  <span className="tabular-nums">{i.v}</span>
-                  {i.d ? <span className="tabular-nums text-[var(--color-text-3)]">{i.d}</span> : null}
-                </div>
-              ))}
-            </div>
+            <button
+              type="button"
+              onClick={() => setCreateOpen(true)}
+              className="text-left shadow-none ring-0 transition-[filter] duration-[var(--dur-2)] hover:brightness-[1.02]"
+            >
+              <Card className="shadow-none">
+                <CardContent className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--color-text-1)]">Adicionar conta</p>
+                    <p className="mt-1 text-sm text-[var(--color-text-3)]">Registre outro lugar onde guarda recursos.</p>
+                  </div>
+                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-accent)_18%,transparent)] text-[var(--color-accent)]">
+                    <Icon name="add" />
+                  </span>
+                </CardContent>
+              </Card>
+            </button>
           </div>
         </div>
       )}
     </div>
   );
 }
-
