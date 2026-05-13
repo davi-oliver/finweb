@@ -39,7 +39,7 @@ export default function PersonalFinancePage() {
               <PfRecurringList />
               <div className="p-4 pt-0">
                 <Link
-                  href="/personal-finance/transactions"
+                  href="/personal-finance/transactions?new=1"
                   className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[var(--color-accent-strong)] px-4 py-2 text-sm font-semibold text-[var(--color-text-invert)] shadow-[var(--shadow-1)] hover:brightness-110"
                 >
                   <Icon name="add" />
@@ -52,21 +52,18 @@ export default function PersonalFinancePage() {
           <Card className="shadow-none bg-[color-mix(in_srgb,var(--color-accent)_16%,var(--color-surface-1))]">
             <CardContent className="space-y-3">
               <div className="flex items-center gap-2">
-                <Icon name="insights" />
-                <h2 className="text-sm font-semibold text-[var(--color-text-1)]">Investimentos em Alta</h2>
+                <Icon name="info" />
+                <h2 className="text-sm font-semibold text-[var(--color-text-1)]">Próximo passo</h2>
               </div>
-              <ul className="space-y-2 text-sm">
-                {[
-                  { name: "CDB Posfixado", value: "+12,5% aa" },
-                  { name: "IVVB11", value: "+3,2%" },
-                  { name: "BTC/BRL", value: "+1,8%" },
-                ].map((i) => (
-                  <li key={i.name} className="flex items-center justify-between gap-3">
-                    <span className="text-[var(--color-text-1)]">{i.name}</span>
-                    <span className="tabular-nums font-semibold text-[var(--color-positive)]">{i.value}</span>
-                  </li>
-                ))}
-              </ul>
+              <p className="text-sm text-[var(--color-text-2)]">
+                O Finweb não exibe cotações de mercado neste painel. Para evoluir seu controle, cadastre contas e registre lançamentos reais — os gráficos passam a refletir só os seus dados.
+              </p>
+              <Link
+                href="/personal-finance/accounts"
+                className="inline-flex text-sm font-medium text-[var(--color-accent-strong)] hover:underline"
+              >
+                Gerenciar contas
+              </Link>
             </CardContent>
           </Card>
         </div>
@@ -84,7 +81,7 @@ export default function PersonalFinancePage() {
       </section>
 
       <Link
-        href="/personal-finance/transactions"
+        href="/personal-finance/transactions?new=1"
         className="fixed bottom-6 right-6 z-40 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[var(--color-accent-strong)] px-5 text-sm font-semibold text-[var(--color-text-invert)] shadow-[var(--shadow-2)] transition-[transform,filter] duration-[var(--dur-2)] ease-[var(--ease-standard)] hover:brightness-110 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)]"
       >
         Novo Lançamento

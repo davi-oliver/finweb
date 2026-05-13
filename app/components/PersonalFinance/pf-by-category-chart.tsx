@@ -91,13 +91,21 @@ export function PfByCategoryChart() {
   if (summary.error || categories.error) {
     return <p className="text-sm text-[var(--color-negative)]">{summary.error ?? categories.error}</p>;
   }
-  const demoItems = [
-    { id: "demo-home", name: "Moradia", amount: 2048.16, color: "color-mix(in_srgb,var(--color-accent)_70%,white)" },
-    { id: "demo-food", name: "Alimentação", amount: 1280.1, color: "var(--color-accent)" },
-    { id: "demo-car", name: "Transporte", amount: 768, color: "color-mix(in_srgb,var(--color-accent)_45%,white)" },
-    { id: "demo-fun", name: "Lazer", amount: 512.04, color: "color-mix(in_srgb,var(--color-negative)_55%,white)" },
-  ];
-  const list = items.length ? items : demoItems;
+
+  if (!items.length) {
+    return (
+      <Card className="shadow-none">
+        <div className="flex flex-col items-center justify-center gap-3 px-4 py-14 text-center sm:py-16">
+          <p className="text-sm font-semibold text-[var(--color-text-1)]">Nenhuma despesa por categoria neste mês</p>
+          <p className="max-w-sm text-sm text-[var(--color-text-2)]">
+            Quando houver despesas classificadas, o gráfico mostra onde o dinheiro saiu — sem fatias de exemplo.
+          </p>
+        </div>
+      </Card>
+    );
+  }
+
+  const list = items;
 
   const total = list.reduce((a, b) => a + b.amount, 0);
   const segments = donutSegments(list.map((i) => i.amount));
@@ -117,16 +125,20 @@ export function PfByCategoryChart() {
         <div className="inline-flex rounded-full bg-[color-mix(in_srgb,var(--color-surface-3)_55%,transparent)] p-1 text-xs">
           {RANGE.map((r) => {
             const active = r === range;
+            const disabled = r === "Semanal";
             return (
               <button
                 key={r}
                 type="button"
-                onClick={() => setRange(r)}
+                disabled={disabled}
+                title={disabled ? "Visão semanal em breve (depende de agregação na API)." : undefined}
+                onClick={() => !disabled && setRange(r)}
                 className={[
                   "rounded-full px-3 py-1 font-medium transition-[background-color,color] duration-[var(--dur-2)] ease-[var(--ease-standard)]",
                   active
                     ? "bg-[var(--color-surface-1)] text-[var(--color-text-1)] shadow-[var(--shadow-1)]/35"
                     : "text-[var(--color-text-2)] hover:text-[var(--color-text-1)]",
+                  disabled ? "cursor-not-allowed opacity-50 hover:text-[var(--color-text-2)]" : "",
                 ].join(" ")}
               >
                 {r}
