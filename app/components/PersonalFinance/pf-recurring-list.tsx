@@ -1,11 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { usePfRecurring } from "@/app/(dashboard)/modules/hooks/use-pf-recurring";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Icon } from "@/components/ui/icon";
 import { StatusPill } from "@/components/ui/status-pill";
 
-function recurringIcon(description?: string | null) {
+export function recurringIcon(description?: string | null) {
   const d = (description ?? "").toLowerCase();
   if (d.includes("net") || d.includes("wifi") || d.includes("internet")) return "wifi";
   if (d.includes("tv") || d.includes("stream") || d.includes("netflix") || d.includes("prime") || d.includes("hbo"))
@@ -47,55 +48,19 @@ export function PfRecurringList() {
   }
   if (error) return <p className="text-sm text-[var(--color-negative)]">{error}</p>;
   if (!items.length) {
-    const demo = [
-      {
-        id: "demo-netflix",
-        description: "Netflix Premium",
-        amount: 55.9,
-        next_due_date: "2024-08-15",
-        is_active: true,
-      },
-      {
-        id: "demo-rent",
-        description: "Aluguel Apartamento",
-        amount: 3200,
-        next_due_date: "2024-08-06",
-        is_active: true,
-      },
-      {
-        id: "demo-fiber",
-        description: "Internet Fibra",
-        amount: 149.9,
-        next_due_date: "2024-08-12",
-        is_active: true,
-      },
-    ];
     return (
-      <ul className="divide-y divide-[var(--color-border)]">
-        {demo.map((r) => {
-          const d = daysUntil(r.next_due_date);
-          const dueLabel = `Vence em ${d} dias`;
-          const pending = d <= 2;
-          const status = pending ? { label: "Pendente", tone: "warning" as const } : { label: "Agendado", tone: "info" as const };
-          return (
-            <li key={r.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-surface-3)_40%,transparent)] text-[var(--color-text-2)]">
-                  <Icon name={recurringIcon(r.description)} />
-                </span>
-                <div className="min-w-0">
-                  <p className="truncate font-semibold text-[var(--color-text-1)]">{r.description}</p>
-                  <p className="text-xs text-[var(--color-text-3)]">{dueLabel}</p>
-                </div>
-              </div>
-              <div className="flex shrink-0 items-center gap-3">
-                <p className="tabular-nums font-semibold text-[var(--color-text-1)]">{fmtBRL(r.amount)}</p>
-                <StatusPill label={status.label} tone={status.tone} />
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+      <div className="px-4 py-8 text-center text-sm text-[var(--color-text-2)]">
+        <p className="font-medium text-[var(--color-text-1)]">Nenhuma recorrência</p>
+        <p className="mt-1 text-xs text-[var(--color-text-3)]">
+          Cadastre contas fixas (aluguel, assinaturas etc.) para acompanhar vencimentos reais — sem itens de demonstração.
+        </p>
+        <Link
+          href="/personal-finance/recurring"
+          className="mt-3 inline-block text-sm font-medium text-[var(--color-accent)] hover:underline"
+        >
+          Ir para recorrências
+        </Link>
+      </div>
     );
   }
 

@@ -65,14 +65,13 @@ export function PfDashboardHeader() {
           <MetricCard
             label="Saldo total"
             value={fmtBRL(saldo)}
-            deltaPercent={2.4}
+            sublabel="Saldos iniciais das contas + resultado do mês"
             tone="neutral"
             icon="account_balance_wallet"
           />
           <MetricCard
             label="Receitas no mês"
             value={fmtBRL(data.totals.income)}
-            sublabel="Meta mensal: R$ 10.000,00"
             tone="positive"
             icon="arrow_downward"
           />

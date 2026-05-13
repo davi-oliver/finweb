@@ -11,6 +11,7 @@ export type PfSummaryResponse = {
     initial_balance_sum: number;
   };
   expense_by_category_id: Record<string, number>;
+  cumulative_result_by_day: Array<{ occurred_on: string; cumulative: number }>;
 };
 
 async function fetchJson<T>(url: string): Promise<{ data: T | null; error: string | null; status: number }> {
