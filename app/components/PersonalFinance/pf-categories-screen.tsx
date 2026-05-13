@@ -1,50 +1,89 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { usePfCategories } from "@/app/(dashboard)/modules/hooks/use-pf-categories";
+import { PfCreateCategoryModal } from "@/app/components/PersonalFinance/pf-create-category-modal";
+import { usePfSummary } from "@/app/(dashboard)/modules/hooks/use-pf-summary";
 import { Card, CardContent } from "@/components/ui/card";
 import type { PfCategoryKind } from "@/lib/personal-finance-types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 
+function monthRange() {
+  const now = new Date();
+  const from = new Date(now.getFullYear(), now.getMonth(), 1);
+  const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  return { from: fmt(from), to: fmt(to) };
+}
+
+function fmtBRL(n: number) {
+  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function kindLabel(k: PfCategoryKind): string {
+  return k === "income" ? "Receita" : "Despesa";
+}
+
 export function PfCategoriesScreen() {
   const [kind, setKind] = useState<PfCategoryKind | undefined>(undefined);
-  const { items, loading, error } = usePfCategories(kind);
+  const [catModalOpen, setCatModalOpen] = useState(false);
+  const { items, loading, error, reload: reloadCategories } = usePfCategories(kind);
+  const expenseCats = usePfCategories("expense");
+  const { from, to } = useMemo(() => monthRange(), []);
+  const summary = usePfSummary(from, to);
 
   const sorted = useMemo(() => {
     return [...items].sort((a, b) => (a.kind ?? "").localeCompare(b.kind ?? "") || (a.name ?? "").localeCompare(b.name ?? ""));
   }, [items]);
 
-  const demo = [
-    { id: "food", icon: "restaurant", name: "Food & Dining", amount: 840, tx: 12, pct: 85, kind: "expense" as const },
-    { id: "transport", icon: "commute", name: "Transport", amount: 320.5, tx: 6, pct: 45, kind: "expense" as const },
-    { id: "shopping", icon: "shopping_bag", name: "Shopping", amount: 1100, tx: 18, pct: 110, kind: "expense" as const },
-    { id: "health", icon: "health_and_safety", name: "Health & Wellness", amount: 215, tx: 3, pct: 28, kind: "expense" as const },
-    { id: "subs", icon: "smart_display", name: "Subscriptions", amount: 45.99, tx: 5, pct: 92, kind: "expense" as const },
-  ];
+  const topExpenseByCategory = useMemo(() => {
+    const map = summary.data?.expense_by_category_id ?? {};
+    const byId = new Map(expenseCats.items.map((c) => [c.id, c]));
+    return Object.entries(map)
+      .map(([id, amount]) => ({
+        id,
+        amount: Number(amount) || 0,
+        name:
+          id === "uncategorized"
+            ? "Sem categoria"
+            : (byId.get(id)?.name ?? "Categoria"),
+      }))
+      .filter((x) => x.amount > 0)
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 4);
+  }, [summary.data, expenseCats.items]);
 
-  const demoInsights = useMemo(
-    () => [
-      { name: "Food & Dining", delta: "+12.7%" },
-      { name: "Housing", delta: "+2.4%" },
-      { name: "Stable", delta: "+4.2%" },
-      { name: "Budget health", delta: "+1.1%" },
-    ],
-    [],
-  );
+  const expenseById = useMemo(() => {
+    return summary.data?.expense_by_category_id ?? {};
+  }, [summary.data]);
+
+  const onCategorySuccess = useCallback(() => {
+    void reloadCategories();
+    void expenseCats.reload();
+    void summary.reload();
+  }, [reloadCategories, expenseCats.reload, summary.reload]);
+
+  const defaultKindForModal: "income" | "expense" = kind === "income" ? "income" : "expense";
 
   return (
     <div className="space-y-6">
+      <PfCreateCategoryModal
+        open={catModalOpen}
+        onClose={() => setCatModalOpen(false)}
+        onSuccess={onCategorySuccess}
+        defaultKind={defaultKindForModal}
+      />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-3)]">Portfolio organization</p>
-          <h2 className="mt-1 text-2xl font-semibold tracking-[-0.02em] text-[var(--color-text-1)]">Manage Your Ledger</h2>
+          <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-3)]">Organização</p>
+          <h2 className="mt-1 text-2xl font-semibold tracking-[-0.02em] text-[var(--color-text-1)]">Categorias</h2>
         </div>
         <div className="inline-flex rounded-full bg-[color-mix(in_srgb,var(--color-surface-3)_55%,transparent)] p-1 text-xs">
           {[
-            { k: "expense" as const, label: "Expenses" },
-            { k: "income" as const, label: "Income" },
+            { k: "expense" as const, label: "Despesas" },
+            { k: "income" as const, label: "Receitas" },
           ].map((t) => {
             const active = kind === t.k;
             return (
@@ -76,129 +115,122 @@ export function PfCategoriesScreen() {
       ) : error ? (
         <p className="text-sm text-[var(--color-negative)]">{error}</p>
       ) : !sorted.length ? (
-        <div className="grid gap-4 lg:grid-cols-3">
-          <Card className="shadow-none">
-            <CardContent className="space-y-3">
-              <p className="text-sm font-semibold text-[var(--color-text-1)]">Quick insights</p>
-              <div className="space-y-2 text-sm">
-                {demo.slice(0, 4).map((c) => (
-                  <div key={c.id} className="flex items-center justify-between gap-3">
-                    <span className="text-[var(--color-text-2)]">{c.name}</span>
-                    <span className="tabular-nums text-[var(--color-positive)]">+{c.pct}%</span>
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs text-[var(--color-text-3)]">Stable</p>
-            </CardContent>
-          </Card>
-
-          <div className="lg:col-span-2 space-y-3">
-            {demo.map((c) => (
-              <Card key={c.id} className="shadow-none">
-                <CardContent className="flex items-start justify-between gap-4">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] bg-[color-mix(in_srgb,var(--color-accent)_18%,transparent)] text-[var(--color-accent)]">
-                      <Icon name={c.icon} filled />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-[var(--color-text-1)]">{c.name}</p>
-                      <p className="mt-1 text-xs text-[var(--color-text-3)]">
-                        <span className="tabular-nums">{c.tx}</span> Transactions · <span className="tabular-nums">{c.pct}%</span> of budget
-                      </p>
-                      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-surface-3)]">
-                        <div
-                          className="h-full rounded-full bg-[var(--color-accent)]"
-                          style={{ width: `${Math.min(100, c.pct)}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="tabular-nums text-sm font-semibold text-[var(--color-text-1)]">
-                      {c.amount.toLocaleString("en-US", { style: "currency", currency: "USD" })}
-                    </p>
-                    <div className="mt-2 flex items-center justify-end gap-1 text-[var(--color-text-3)]">
-                      <button type="button" className="rounded-full px-2 py-1 text-xs hover:bg-[var(--color-surface-3)]">
-                        edit
-                      </button>
-                      <button type="button" className="rounded-full px-2 py-1 text-xs hover:bg-[var(--color-surface-3)]">
-                        delete
-                      </button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-
-            <div className="mt-4 flex items-center justify-center gap-2 text-xs text-[var(--color-text-3)]">
-              <Icon name="cloud_done" />
-              <span>All categories are synchronized across your Vault devices. Last backup: 2 minutes ago.</span>
+        <Card className="shadow-none">
+          <CardContent className="flex flex-col items-center gap-4 py-12 text-center sm:py-14">
+            <span className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-accent)_18%,transparent)] text-[var(--color-accent)]">
+              <Icon name="category" size={28} />
+            </span>
+            <div className="max-w-md space-y-2">
+              <p className="text-base font-semibold text-[var(--color-text-1)]">Nenhuma categoria neste filtro</p>
+              <p className="text-sm text-[var(--color-text-2)]">
+                Quando você ou o produto cadastrarem categorias, elas aparecem aqui — sem listas de exemplo.
+              </p>
             </div>
-          </div>
-        </div>
+            <Button variant="secondary" size="sm" className="rounded-full px-5" type="button" onClick={() => setCatModalOpen(true)}>
+              Nova categoria
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid gap-4 lg:grid-cols-3">
           <Card className="shadow-none">
-            <CardContent className="space-y-3">
-              <p className="text-sm font-semibold text-[var(--color-text-1)]">Quick insights</p>
-              <div className="space-y-2 text-sm">
-                {demoInsights.map((c) => (
-                  <div key={c.name} className="flex items-center justify-between gap-3">
-                    <span className="text-[var(--color-text-2)]">{c.name}</span>
-                    <span className="tabular-nums text-[var(--color-positive)]">{c.delta}</span>
+            <CardContent className="space-y-4">
+              <p className="text-sm font-semibold text-[var(--color-text-1)]">Resumo do mês</p>
+              {summary.loading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-2/3" />
+                </div>
+              ) : summary.error ? (
+                <p className="text-xs text-[var(--color-negative)]">{summary.error}</p>
+              ) : summary.data ? (
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between gap-3 text-[var(--color-text-2)]">
+                    <span>Receitas</span>
+                    <span className="tabular-nums font-medium text-[var(--color-text-1)]">{fmtBRL(summary.data.totals.income)}</span>
                   </div>
-                ))}
+                  <div className="flex justify-between gap-3 text-[var(--color-text-2)]">
+                    <span>Despesas</span>
+                    <span className="tabular-nums font-medium text-[var(--color-text-1)]">{fmtBRL(summary.data.totals.expense)}</span>
+                  </div>
+                  <div className="flex justify-between gap-3 border-t border-[var(--color-border)] pt-2 text-[var(--color-text-2)]">
+                    <span>Resultado</span>
+                    <span
+                      className={`tabular-nums font-semibold ${summary.data.totals.result >= 0 ? "text-[var(--color-positive)]" : "text-[var(--color-negative)]"}`}
+                    >
+                      {fmtBRL(summary.data.totals.result)}
+                    </span>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="border-t border-[var(--color-border)] pt-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-3)]">Maiores despesas por categoria</p>
+                {summary.loading ? (
+                  <div className="mt-2 space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-5/6" />
+                  </div>
+                ) : topExpenseByCategory.length ? (
+                  <ul className="mt-2 space-y-2 text-sm">
+                    {topExpenseByCategory.map((row) => (
+                      <li key={row.id} className="flex items-center justify-between gap-2">
+                        <span className="min-w-0 truncate text-[var(--color-text-2)]">{row.name}</span>
+                        <span className="shrink-0 tabular-nums font-medium text-[var(--color-text-1)]">{fmtBRL(row.amount)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-2 text-xs text-[var(--color-text-3)]">Nenhuma despesa com categoria neste mês.</p>
+                )}
               </div>
-              <p className="text-xs text-[var(--color-text-3)]">Stable</p>
-              <Button variant="secondary" size="sm" className="w-full rounded-full">
-                Create
+
+              <Button variant="secondary" size="sm" className="w-full rounded-full" type="button" onClick={() => setCatModalOpen(true)}>
+                Nova categoria
               </Button>
             </CardContent>
           </Card>
 
           <div className="lg:col-span-2 space-y-3">
-            {sorted.slice(0, 5).map((c, idx) => (
-              <Card key={c.id} className="shadow-none">
-                <CardContent className="flex items-start justify-between gap-4">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] bg-[color-mix(in_srgb,var(--color-accent)_18%,transparent)] text-[var(--color-accent)]">
-                      <Icon name={["restaurant", "commute", "shopping_bag", "health_and_safety", "smart_display"][idx % 5] ?? "category"} filled />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-[var(--color-text-1)]">{c.name}</p>
-                      <p className="mt-1 text-xs text-[var(--color-text-3)]">
-                        <span className="tabular-nums">{(idx + 3) * 3}</span> Transactions · <span className="tabular-nums">{(idx + 2) * 18}%</span> of budget
-                      </p>
-                      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-surface-3)]">
-                        <div className="h-full rounded-full bg-[var(--color-accent)]" style={{ width: `${Math.min(100, (idx + 2) * 18)}%` }} />
+            {sorted.map((c) => {
+              const spent =
+                c.kind === "expense" && expenseById[c.id] != null ? Number(expenseById[c.id]) : null;
+              const dotStyle = c.color ? { backgroundColor: c.color } : undefined;
+              return (
+                <Card key={c.id} className="shadow-none">
+                  <CardContent className="flex items-start justify-between gap-4">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <span
+                        className="mt-1 inline-flex h-3 w-3 shrink-0 rounded-full bg-[var(--color-accent)]"
+                        style={dotStyle}
+                        aria-hidden
+                      />
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-[var(--color-text-1)]">{c.name}</p>
+                        <p className="mt-0.5 text-xs text-[var(--color-text-3)]">
+                          {kindLabel(c.kind)}
+                          {c.is_system ? " · Sugestão do sistema" : ""}
+                        </p>
                       </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="tabular-nums text-sm font-semibold text-[var(--color-text-1)]">
-                      {(idx * 240 + 320.5).toLocaleString("en-US", { style: "currency", currency: "USD" })}
-                    </p>
-                    <div className="mt-2 flex items-center justify-end gap-1 text-[var(--color-text-3)]">
-                      <button type="button" className="rounded-full px-2 py-1 text-xs hover:bg-[var(--color-surface-3)]">
-                        edit
-                      </button>
-                      <button type="button" className="rounded-full px-2 py-1 text-xs hover:bg-[var(--color-surface-3)]">
-                        delete
-                      </button>
+                    <div className="shrink-0 text-right">
+                      {spent != null && spent > 0 ? (
+                        <p className="tabular-nums text-sm font-semibold text-[var(--color-text-1)]">{fmtBRL(spent)}</p>
+                      ) : c.kind === "expense" ? (
+                        <p className="text-xs text-[var(--color-text-3)]">Sem despesa no mês</p>
+                      ) : (
+                        <p className="text-xs text-[var(--color-text-3)]">—</p>
+                      )}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-
-            <div className="mt-4 flex items-center justify-center gap-2 text-xs text-[var(--color-text-3)]">
-              <Icon name="cloud_done" />
-              <span>All categories are synchronized across your Vault devices. Last backup: 2 minutes ago.</span>
-            </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       )}
     </div>
   );
 }
-
