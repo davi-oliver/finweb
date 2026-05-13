@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandLogo } from "@/components/brand-logo";
 import { DashboardUserMenu } from "@/components/dashboard-user-menu";
 
 export type SidebarItem = {
@@ -27,10 +28,8 @@ export function Sidebar({ enabledFlags }: SidebarProps) {
   return (
     <aside className="flex min-h-screen w-56 shrink-0 flex-col border-r border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950">
       <div className="border-b border-zinc-200 px-4 py-4 dark:border-zinc-800">
-        <Link href="/" className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Finweb
-        </Link>
-        <p className="mt-1 text-xs text-zinc-500">Finanças pessoais</p>
+        <BrandLogo variant="horizontal" className="h-9" priority />
+        <p className="mt-2 text-xs text-zinc-500">Finanças pessoais</p>
       </div>
       <nav className="flex flex-col gap-0.5 p-2">
         {items.map((item) => (
