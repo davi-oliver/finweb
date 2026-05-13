@@ -1,11 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { usePfTransactions } from "@/app/(dashboard)/modules/hooks/use-pf-transactions";
+import { usePfAccounts } from "@/app/(dashboard)/modules/hooks/use-pf-accounts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { usePfCategories } from "@/app/(dashboard)/modules/hooks/use-pf-categories";
+import { PfCreateTransactionModal } from "@/app/components/PersonalFinance/pf-create-transaction-modal";
 
 function fmtBRL(n: number) {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -34,6 +37,7 @@ function txIcon(description?: string | null, categoryName?: string | null, kind?
   const d = (description ?? "").toLowerCase();
   const c = (categoryName ?? "").toLowerCase();
   if (kind === "income") return "payments";
+  if (kind === "transfer") return "swap_horiz";
   if (d.includes("uber") || c.includes("transporte") || d.includes("99")) return "directions_car";
   if (c.includes("lazer") || d.includes("madero") || d.includes("restaurant")) return "restaurant";
   if (c.includes("aliment") || d.includes("super") || d.includes("pão de açúcar")) return "shopping_bag";
@@ -41,8 +45,18 @@ function txIcon(description?: string | null, categoryName?: string | null, kind?
   return "shopping_bag";
 }
 
+function signedDisplayAmount(kind: "income" | "expense" | "transfer", raw: number): number {
+  const n = Math.abs(Number(raw) || 0);
+  if (kind === "expense") return -n;
+  if (kind === "income") return n;
+  return -n;
+}
+
 export function PfTransactionsScreen() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [monthPreset, setMonthPreset] = useState(true);
+  const [txOpen, setTxOpen] = useState(false);
 
   const { from, to } = useMemo(() => {
     if (!monthPreset) return { from: undefined as string | undefined, to: undefined as string | undefined };
@@ -52,7 +66,8 @@ export function PfTransactionsScreen() {
     return { from: f, to: t };
   }, [monthPreset]);
 
-  const { items, loading, error } = usePfTransactions(from, to);
+  const { items, loading, error, reload } = usePfTransactions(from, to);
+  const { items: accounts, reload: reloadAccounts } = usePfAccounts();
   const expenseCats = usePfCategories("expense");
   const incomeCats = usePfCategories("income");
 
@@ -63,70 +78,37 @@ export function PfTransactionsScreen() {
     return m;
   }, [expenseCats.items, incomeCats.items]);
 
-  const demo = [
-    {
-      id: "demo-1",
-      kind: "expense" as const,
-      description: "Supermercado Pão de Açúcar",
-      category: "Alimentação",
-      account: "Cartão Black",
-      amount: -432.5,
-      occurred_on: "2024-05-24",
-      time: "14:32",
-      icon: "shopping_bag",
-    },
-    {
-      id: "demo-2",
-      kind: "income" as const,
-      description: "Dividendos Petrobras",
-      category: "Investimentos",
-      account: "XP Investimentos",
-      amount: 1250,
-      occurred_on: "2024-05-24",
-      time: "10:15",
-      icon: "payments",
-    },
-    {
-      id: "demo-3",
-      kind: "expense" as const,
-      description: "Uber Trip",
-      category: "Transporte",
-      account: "Cartão Black",
-      amount: -42.9,
-      occurred_on: "2024-05-23",
-      time: "21:05",
-      icon: "directions_car",
-    },
-    {
-      id: "demo-4",
-      kind: "expense" as const,
-      description: "Madero Prime Steakhouse",
-      category: "Lazer",
-      account: "Nubank Violeta",
-      amount: -185,
-      occurred_on: "2024-05-23",
-      time: "19:30",
-      icon: "restaurant",
-    },
-  ];
+  const accountsById = useMemo(() => {
+    return new Map(accounts.map((a) => [a.id, a.name]));
+  }, [accounts]);
 
-  const list = items.length
-    ? items.map((t) => {
-        const category = t.category_id ? catsById.get(t.category_id) ?? "Categoria" : t.kind === "income" ? "Investimentos" : "Categoria";
-        const amount = Number(t.amount);
-        return {
-          id: t.id,
-          kind: t.kind,
-          description: t.description ?? t.kind,
-          category,
-          account: "Cartão",
-          amount,
-          occurred_on: t.occurred_on,
-          time: fmtTimeHM(t.created_at),
-          icon: txIcon(t.description, category, t.kind),
-        };
-      })
-    : demo;
+  const list = useMemo(() => {
+    return items.map((t) => {
+      const category = t.category_id
+        ? (catsById.get(t.category_id) ?? "Categoria")
+        : t.kind === "income"
+          ? "Receita"
+          : t.kind === "transfer"
+            ? "Transferência"
+            : "—";
+      const amount = signedDisplayAmount(t.kind, t.amount);
+      const accountName =
+        t.kind === "transfer" && t.counterparty_account_id
+          ? `${accountsById.get(t.account_id) ?? "Conta"} → ${accountsById.get(t.counterparty_account_id) ?? "Conta"}`
+          : (accountsById.get(t.account_id) ?? "Conta");
+      return {
+        id: t.id,
+        kind: t.kind,
+        description: t.description ?? t.kind,
+        category,
+        account: accountName,
+        amount,
+        occurred_on: t.occurred_on,
+        time: fmtTimeHM(t.created_at),
+        icon: txIcon(t.description, category, t.kind),
+      };
+    });
+  }, [items, catsById, accountsById]);
 
   const grouped = useMemo(() => {
     const m = new Map<string, typeof list>();
@@ -139,8 +121,25 @@ export function PfTransactionsScreen() {
     return Array.from(m.entries()).sort(([a], [b]) => (a > b ? -1 : 1));
   }, [list]);
 
+  useEffect(() => {
+    if (searchParams.get("new") === "1") setTxOpen(true);
+  }, [searchParams]);
+
+  const closeTxModal = useCallback(() => {
+    setTxOpen(false);
+    if (searchParams.get("new") === "1") {
+      router.replace("/personal-finance/transactions", { scroll: false });
+    }
+  }, [router, searchParams]);
+
+  const onTxSuccess = useCallback(() => {
+    void reload();
+    void reloadAccounts();
+  }, [reload, reloadAccounts]);
+
   return (
     <div className="space-y-6">
+      <PfCreateTransactionModal open={txOpen} onClose={closeTxModal} onSuccess={onTxSuccess} />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-3)]">Finanças pessoais</p>
@@ -164,7 +163,7 @@ export function PfTransactionsScreen() {
             <Icon name="category" />
             Categorias
           </Button>
-          <Button variant="primary" size="sm" className="rounded-full px-3">
+          <Button variant="primary" size="sm" className="rounded-full px-3" type="button" onClick={() => setTxOpen(true)}>
             <Icon name="add" />
             Nova Transação
           </Button>
@@ -180,72 +179,18 @@ export function PfTransactionsScreen() {
           <CardContent className="p-4 text-sm text-[var(--color-negative)]">{error}</CardContent>
         </Card>
       ) : !items.length ? (
-        <div className="space-y-6">
-          {grouped.map(([date, txs]) => (
-            <div key={date} className="space-y-3">
-              <h3 className="text-sm font-semibold text-[var(--color-text-1)]">{fmtDayHeadingPT(date)}</h3>
-              <div className="space-y-2">
-                {txs.map((t) => {
-                  const positive = t.amount >= 0;
-                  return (
-                    <div
-                      key={t.id}
-                      className="flex items-center justify-between gap-4 rounded-[var(--radius-lg)] bg-[var(--color-surface-1)] px-4 py-3 shadow-[var(--shadow-1)]/30"
-                    >
-                      <div className="flex min-w-0 items-center gap-3">
-                        <span className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-[color-mix(in_srgb,var(--color-accent)_18%,transparent)] text-[var(--color-accent)]">
-                          <Icon name={t.icon} filled />
-                        </span>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-[var(--color-text-1)]">{t.description}</p>
-                          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--color-text-3)]">
-                            <span className="inline-flex items-center gap-1">
-                              <Icon name="category" />
-                              {t.category}
-                            </span>
-                            <span>•</span>
-                            <span className="inline-flex items-center gap-1">
-                              <Icon name="credit_card" />
-                              {t.account}
-                            </span>
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className={`tabular-nums text-sm font-semibold ${positive ? "text-[var(--color-positive)]" : "text-[var(--color-negative)]"}`}>
-                          {positive ? "+" : "-"} {fmtBRL(Math.abs(t.amount))}
-                        </p>
-                        <p className="mt-0.5 tabular-nums text-xs text-[var(--color-text-3)]">{t.time}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-
-          <div className="rounded-[var(--radius-lg)] bg-[var(--color-surface-1)] p-6 text-center shadow-[var(--shadow-1)]/25">
-            <div className="mx-auto grid h-10 w-10 place-items-center rounded-full bg-[color-mix(in_srgb,var(--color-surface-3)_55%,transparent)] text-[var(--color-text-2)]">
-              <Icon name="history_toggle_off" />
-            </div>
-            <p className="mt-3 text-sm font-semibold text-[var(--color-text-1)]">
-              Nenhuma transação encontrada para este período
-            </p>
-            <p className="mt-1 text-sm text-[var(--color-text-3)]">
-              Tente ajustar seus filtros ou adicione uma nova transação manualmente para começar a rastrear.
-            </p>
-            <div className="mt-4 flex justify-center">
-              <Button variant="primary" className="rounded-full px-4">
-                <Icon name="add" />
-                Adicionar Transação
-              </Button>
-            </div>
+        <div className="rounded-[var(--radius-lg)] bg-[var(--color-surface-1)] p-6 text-center shadow-[var(--shadow-1)]/25">
+          <div className="mx-auto grid h-10 w-10 place-items-center rounded-full bg-[color-mix(in_srgb,var(--color-surface-3)_55%,transparent)] text-[var(--color-text-2)]">
+            <Icon name="history_toggle_off" />
           </div>
-
-          <div className="flex justify-center">
-            <Button variant="secondary" className="rounded-full px-4">
-              Ver mais transações
-              <Icon name="expand_more" />
+          <p className="mt-3 text-sm font-semibold text-[var(--color-text-1)]">Nenhuma transação neste período</p>
+          <p className="mt-1 text-sm text-[var(--color-text-3)]">
+            Quando você registrar receitas, despesas ou transferências, elas aparecem aqui — sem lançamentos de exemplo.
+          </p>
+          <div className="mt-4 flex justify-center">
+            <Button variant="primary" className="rounded-full px-4" type="button" onClick={() => setTxOpen(true)}>
+              <Icon name="add" />
+              Nova transação
             </Button>
           </div>
         </div>
@@ -276,14 +221,14 @@ export function PfTransactionsScreen() {
                             <span>•</span>
                             <span className="inline-flex items-center gap-1">
                               <Icon name="credit_card" />
-                              {t.account}
+                              <span className="truncate">{t.account}</span>
                             </span>
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="shrink-0 text-right">
                         <p className={`tabular-nums text-sm font-semibold ${positive ? "text-[var(--color-positive)]" : "text-[var(--color-negative)]"}`}>
-                          {positive ? "+" : "-"} {fmtBRL(Math.abs(t.amount))}
+                          {positive ? "+" : "−"} {fmtBRL(Math.abs(t.amount))}
                         </p>
                         <p className="mt-0.5 tabular-nums text-xs text-[var(--color-text-3)]">{t.time}</p>
                       </div>
@@ -305,4 +250,3 @@ export function PfTransactionsScreen() {
     </div>
   );
 }
-
