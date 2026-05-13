@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandLogo } from "@/components/brand-logo";
 import { DashboardUserMenu } from "@/components/dashboard-user-menu";
 
 const NAV = [
@@ -15,9 +16,7 @@ export function Topbar() {
     <header className="sticky top-0 z-40 border-b border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-bg)_70%,transparent)] backdrop-blur-[10px]">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-3">
         <div className="flex items-center gap-4">
-          <Link href="/personal-finance" className="text-sm font-semibold tracking-[-0.02em] text-[var(--color-text-1)]">
-            TheKineticLedger
-          </Link>
+          <BrandLogo variant="horizontal" href="/personal-finance" className="h-7" />
           <nav className="hidden items-center gap-1 md:flex">
             {NAV.map((i) => (
               <Link
