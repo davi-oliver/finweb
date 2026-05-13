@@ -120,7 +120,7 @@ Pasta: `app/components/PersonalFinance/`
 | `pf-by-category-chart.tsx` | Distribuição por categoria |
 | `pf-budget-progress.tsx` | Progresso de orçamento |
 | `pf-recurring-list.tsx` | Lista de recorrências |
-| `pf-transaction-list.tsx` / `pf-transaction-form.tsx` | Lista e formulário de transações |
+| `pf-transactions-screen.tsx` / `pf-create-transaction-modal.tsx` | Lista e modal de novo lançamento |
 | `pf-account-card.tsx` | Cartão de conta no resumo |
 
 *A fazer:* escolher 2–3 componentes e explicar quais endpoints alimentam cada um.
