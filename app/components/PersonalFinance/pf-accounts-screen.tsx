@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { usePfAccounts } from "@/app/(dashboard)/modules/hooks/use-pf-accounts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Icon } from "@/components/ui/icon";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { PfAccount } from "@/lib/personal-finance-types";
 import { PfCreateAccountModal } from "@/app/components/PersonalFinance/pf-create-account-modal";
 
@@ -22,6 +22,8 @@ function initials(name: string) {
 
 function displayTypeForAccount(a: PfAccount): string {
   if (a.type === "checking") return "Corrente";
+  if (a.type === "savings") return "Poupança";
+  if (a.type === "credit_card") return "Cartão de crédito";
   if (a.type === "investment") return "Investimento";
   if (a.type === "cash") return "Espécie";
   return a.type ?? "Conta";
@@ -31,6 +33,9 @@ export function PfAccountsScreen() {
   const { items, loading, error, reload } = usePfAccounts();
   const [view, setView] = useState<"grid" | "list">("grid");
   const [createOpen, setCreateOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<PfAccount | null>(null);
+  const [openActionId, setOpenActionId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const list = useMemo(
     () =>
@@ -41,6 +46,7 @@ export function PfAccountsScreen() {
         initial_balance: a.initial_balance,
         currency: a.currency,
         displayType: displayTypeForAccount(a),
+        account: a,
       })),
     [items],
   );
@@ -52,9 +58,31 @@ export function PfAccountsScreen() {
 
   const hasAccounts = items.length > 0;
 
+  useEffect(() => {
+    if (!notice) return;
+    const timeoutId = window.setTimeout(() => setNotice(null), 3500);
+    return () => window.clearTimeout(timeoutId);
+  }, [notice]);
+
   return (
     <div className="space-y-6">
-      <PfCreateAccountModal open={createOpen} onClose={() => setCreateOpen(false)} onSuccess={() => void reload()} />
+      <PfCreateAccountModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSuccess={() => {
+          setNotice("Conta criada com sucesso.");
+          void reload();
+        }}
+      />
+      <PfCreateAccountModal
+        open={Boolean(editingAccount)}
+        account={editingAccount}
+        onClose={() => setEditingAccount(null)}
+        onSuccess={() => {
+          setNotice("Conta atualizada com sucesso.");
+          void reload();
+        }}
+      />
 
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-xl font-semibold tracking-[-0.02em] text-[var(--color-text-1)]">Contas</h2>
@@ -74,6 +102,15 @@ export function PfAccountsScreen() {
           </Button>
         </div>
       </div>
+
+      {notice ? (
+        <p
+          role="status"
+          className="rounded-[var(--radius-md)] border border-[color-mix(in_srgb,var(--color-accent)_35%,var(--color-border))] bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)] px-4 py-3 text-sm text-[var(--color-text-1)]"
+        >
+          {notice}
+        </p>
+      ) : null}
 
       {loading ? (
         <div className="grid gap-4 lg:grid-cols-3">
@@ -186,13 +223,44 @@ export function PfAccountsScreen() {
                         </p>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--color-text-2)] hover:bg-[var(--color-surface-3)]"
-                      aria-label="Mais opções"
+                    <div
+                      className="relative shrink-0"
+                      onBlur={(event) => {
+                        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                          setOpenActionId(null);
+                        }
+                      }}
                     >
-                      <Icon name="more_vert" />
-                    </button>
+                      <button
+                        type="button"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--color-text-2)] hover:bg-[var(--color-surface-3)]"
+                        aria-label={`Mais opções de ${a.name}`}
+                        aria-expanded={openActionId === a.id}
+                        aria-haspopup="menu"
+                        onClick={() => setOpenActionId((current) => (current === a.id ? null : a.id))}
+                      >
+                        <Icon name="more_vert" />
+                      </button>
+                      {openActionId === a.id ? (
+                        <div
+                          role="menu"
+                          className="absolute right-0 top-10 z-20 w-40 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-1)] p-1 shadow-[var(--shadow-2)]"
+                        >
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm text-[var(--color-text-1)] hover:bg-[var(--color-surface-2)]"
+                            onClick={() => {
+                              setOpenActionId(null);
+                              setEditingAccount(a.account);
+                            }}
+                          >
+                            <Icon name="edit" size={18} />
+                            Editar
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
                   </CardContent>
                 </Card>
               );
