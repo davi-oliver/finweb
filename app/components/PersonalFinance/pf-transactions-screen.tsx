@@ -48,8 +48,7 @@ function txIcon(description?: string | null, categoryName?: string | null, kind?
 function signedDisplayAmount(kind: "income" | "expense" | "transfer", raw: number): number {
   const n = Math.abs(Number(raw) || 0);
   if (kind === "expense") return -n;
-  if (kind === "income") return n;
-  return -n;
+  return n;
 }
 
 export function PfTransactionsScreen() {
@@ -66,7 +65,7 @@ export function PfTransactionsScreen() {
     return { from: f, to: t };
   }, [monthPreset]);
 
-  const { items, loading, error, reload } = usePfTransactions(from, to);
+  const { items, loading, error, reload } = usePfTransactions(from, to, 100);
   const { items: accounts, reload: reloadAccounts } = usePfAccounts();
   const expenseCats = usePfCategories("expense");
   const incomeCats = usePfCategories("income");
@@ -113,7 +112,7 @@ export function PfTransactionsScreen() {
   const grouped = useMemo(() => {
     const m = new Map<string, typeof list>();
     for (const t of list) {
-      const k = t.occurred_on;
+      const k = t.occurred_on.slice(0, 10);
       const arr = m.get(k) ?? [];
       arr.push(t);
       m.set(k, arr);
@@ -227,8 +226,8 @@ export function PfTransactionsScreen() {
                         </div>
                       </div>
                       <div className="shrink-0 text-right">
-                        <p className={`tabular-nums text-sm font-semibold ${positive ? "text-[var(--color-positive)]" : "text-[var(--color-negative)]"}`}>
-                          {positive ? "+" : "−"} {fmtBRL(Math.abs(t.amount))}
+                        <p className={`tabular-nums text-sm font-semibold ${t.kind === "transfer" ? "text-[var(--color-text-2)]" : positive ? "text-[var(--color-positive)]" : "text-[var(--color-negative)]"}`}>
+                          {t.kind === "transfer" ? "" : positive ? "+ " : "− "}{fmtBRL(Math.abs(t.amount))}
                         </p>
                         <p className="mt-0.5 tabular-nums text-xs text-[var(--color-text-3)]">{t.time}</p>
                       </div>
