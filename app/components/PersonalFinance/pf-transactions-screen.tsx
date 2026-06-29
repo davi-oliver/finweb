@@ -175,7 +175,13 @@ export function PfTransactionsScreen() {
         </Card>
       ) : error ? (
         <Card className="shadow-none">
-          <CardContent className="p-4 text-sm text-[var(--color-negative)]">{error}</CardContent>
+          <CardContent className="flex flex-col items-start gap-3 p-4 text-sm">
+            <p className="text-[var(--color-negative)]">{error}</p>
+            <Button variant="secondary" size="sm" className="rounded-full" type="button" onClick={() => void reload()}>
+              <Icon name="refresh" />
+              Tentar novamente
+            </Button>
+          </CardContent>
         </Card>
       ) : !items.length ? (
         <div className="rounded-[var(--radius-lg)] bg-[var(--color-surface-1)] p-6 text-center shadow-[var(--shadow-1)]/25">
